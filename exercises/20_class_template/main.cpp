@@ -34,9 +34,31 @@ struct Tensor4D {
     // `others` 长度为 1 但 `this` 长度不为 1 的维度将发生广播计算。
     // 例如，`this` 形状为 `[1, 2, 3, 4]`，`others` 形状为 `[1, 2, 1, 4]`，
     // 则 `this` 与 `others` 相加时，3 个形状为 `[1, 2, 1, 4]` 的子张量各自与 `others` 对应项相加。
-Tensor4D &operator+=(Tensor4D const &others) {
-  
-}
+  Tensor4D &operator+=(Tensor4D const &others) {
+    // Check for single direction broadcast compatibility
+    for (int i = 0; i < 4; ++i) {
+        if (shape[i] != others.shape[i] && others.shape[i] != 1) {
+            throw std::invalid_argument("Incompatible shapes for broadcasting");
+        }
+    }
+
+    // Perform the addition with broadcasting
+    for (int i = 0; i < shape[0]; ++i) {
+        for (int j = 0; j < shape[1]; ++j) {
+            for (int k = 0; k < shape[2]; ++k) {
+                for (int l = 0; l < shape[3]; ++l) {
+                    unsigned int idx = ((i * shape[1] + j) * shape[2] + k) * shape[3] + l;
+                    unsigned int idx_others = ((i % others.shape[0] * others.shape[1] + j % others.shape[1])
+                                               * others.shape[2] + k % others.shape[2]) * others.shape[3]
+                                               + l % others.shape[3];
+                    data[idx] += others.data[idx_others];
+                }
+            }
+        }
+    }
+
+    return *this;
+  }
 };
 
 
